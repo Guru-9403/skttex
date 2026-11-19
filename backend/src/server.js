@@ -14,8 +14,13 @@ if (missing.length) {
 const PORT = process.env.PORT || 5000;
 
 const ensureAdminUser = async () => {
-  const adminEmail = (process.env.ADMIN_EMAIL || 'jdguru7777@gmail.com').trim().toLowerCase();
-  const adminPassword = (process.env.ADMIN_PASSWORD || 'JD@1234').trim();
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const adminPassword = (process.env.ADMIN_PASSWORD || '').trim();
+
+  if (!adminEmail || !adminPassword) {
+    console.log('[Admin Setup] No ADMIN_EMAIL or ADMIN_PASSWORD set in environment, skipping admin auto-sync.');
+    return;
+  }
 
   let admin = await User.findOne({ email: adminEmail }).select('+password');
   if (!admin) {
