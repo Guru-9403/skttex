@@ -139,6 +139,18 @@ export const getStockDashboard = asyncHandler(async (req, res) => {
     .sort({ date: -1, createdAt: -1 })
     .limit(10);
 
+  const metrics = {
+    totalItems,
+    totalCurrentStock: availableStock,
+    totalInwardStock: totalInward,
+    totalOutwardStock: totalOutward,
+    totalStockPurchaseValue: Math.round(totalStockValue),
+    totalStockSellingValue: Math.round(totalSellingValue),
+    lowStockItems: lowStockCount,
+    outOfStockItems: outOfStockCount,
+    inStockItems: inStockCount,
+  };
+
   res.json({
     totalItems,
     availableStock,
@@ -150,9 +162,11 @@ export const getStockDashboard = asyncHandler(async (req, res) => {
     outOfStockCount,
     inStockCount,
     lowStockItems,
+    lowStockAlerts: lowStockItems,
     outOfStockItems,
     categoryBreakdown,
     recentTransactions,
+    metrics,
   });
 });
 
@@ -213,6 +227,8 @@ export const createStockItem = asyncHandler(async (req, res) => {
     name,
     category,
     unit = 'Pieces',
+    type = 'General',
+    image = '',
     openingStock = 0,
     lowStockThreshold = 10,
     purchasePrice,
@@ -246,6 +262,8 @@ export const createStockItem = asyncHandler(async (req, res) => {
     name: name.trim(),
     category: category || 'General',
     unit: unit || 'Pieces',
+    type: type || 'General',
+    image: image || '',
     openingStock: opStock,
     totalInward: 0,
     totalOutward: 0,

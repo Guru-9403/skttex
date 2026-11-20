@@ -25,6 +25,16 @@ const stockItemSchema = new mongoose.Schema(
       default: 'Pieces',
       trim: true,
     },
+    type: {
+      type: String,
+      default: 'General',
+      trim: true,
+    },
+    image: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     openingStock: {
       type: Number,
       required: true,
@@ -100,7 +110,6 @@ stockItemSchema.methods.recalculateStock = function () {
   }
 };
 
-stockItemSchema.index({ itemCode: 1 });
 stockItemSchema.index({ category: 1 });
 stockItemSchema.index({ status: 1 });
 
