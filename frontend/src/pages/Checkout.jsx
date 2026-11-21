@@ -21,8 +21,9 @@ export default function Checkout() {
   const [utrError, setUtrError] = useState('');
   const [qr, setQr] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
 
-  const opts = { amount: total, orderId, note: `Order ${orderId}` };
+  const opts = { amount: total };
 
   useEffect(() => {
     if (step !== 'pay' || mobile) return;
@@ -66,6 +67,14 @@ export default function Checkout() {
       await navigator.clipboard.writeText(payment.upiId);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard blocked */ }
+  };
+
+  const copyAmount = async () => {
+    try {
+      await navigator.clipboard.writeText(Number(total || 0).toFixed(2));
+      setCopiedAmount(true);
+      setTimeout(() => setCopiedAmount(false), 2000);
     } catch { /* clipboard blocked */ }
   };
 
@@ -137,10 +146,23 @@ export default function Checkout() {
 
                 <div className="upi-box">
                   <div>
+                    <span>Total Purchase Value</span>
+                    <strong style={{ fontSize: '1.25rem', color: '#166534' }}>{formatPrice(total)}</strong>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--muted)' }}>
+                      Amount automatically filled in app • No notes added
+                    </p>
+                  </div>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={copyAmount} style={{ marginLeft: 'auto' }}>
+                    {copiedAmount ? 'Copied ✓' : 'Copy Amount'}
+                  </button>
+                </div>
+
+                <div className="upi-box" style={{ marginTop: '10px' }}>
+                  <div>
                     <span>Official Payee UPI ID</span>
                     <strong>{payment.upiId}</strong>
                     <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--muted)' }}>
-                      Merchant: <strong>{payment.payeeName}</strong>
+                      Payee: <strong>{payment.payeeName}</strong>
                     </p>
                   </div>
                   <button type="button" className="btn btn-outline btn-sm" onClick={copyUpi} style={{ marginLeft: 'auto' }}>
@@ -150,19 +172,19 @@ export default function Checkout() {
 
                 {mobile ? (
                   <div style={{ marginTop: 18 }}>
-                    <p className="co-hint">Choose your preferred UPI payment app to pay securely:</p>
+                    <p className="co-hint">Tap below to open your payment app with {formatPrice(total)} automatically entered:</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <a className="btn btn-phonepe btn-block" href={phonepeLink(opts)}>
-                        Pay {formatPrice(total)} with PhonePe
-                      </a>
                       <a className="btn btn-gpay btn-block" href={gpayLink(opts)}>
                         Pay {formatPrice(total)} with Google Pay
+                      </a>
+                      <a className="btn btn-phonepe btn-block" href={phonepeLink(opts)}>
+                        Pay {formatPrice(total)} with PhonePe
                       </a>
                       <a className="btn btn-paytm btn-block" href={paytmLink(opts)}>
                         Pay {formatPrice(total)} with Paytm
                       </a>
                       <a className="btn btn-outline btn-block" href={upiLink(opts)}>
-                        Pay with Any UPI App
+                        ⚡ Pay with Any UPI App (Direct)
                       </a>
                     </div>
                   </div>
