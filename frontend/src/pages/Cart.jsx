@@ -94,7 +94,7 @@ export default function Cart() {
                   Proceed to Checkout
                 </Link>
                 <p className="summary-note">
-                  Buying 20+ pieces? <Link to="/wholesale" className="section-link">Ask for wholesale rates</Link>
+                  🔒 100% Safe UPI Payment &bull; Fast Doorstep Delivery
                 </p>
               </aside>
             </div>

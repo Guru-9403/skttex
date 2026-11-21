@@ -39,13 +39,6 @@ export default function Navbar() {
       />
 
       <header className="header">
-        {/* Topbar announcement */}
-        <div className="topbar">
-          <span>Free shipping above ₹1,999</span>
-          <span className="topbar-sep">&nbsp;|&nbsp;</span>
-          <span>Wholesale available</span>
-        </div>
-
         <div className="container header-main">
           {/* Mobile Hamburger Button */}
           <button

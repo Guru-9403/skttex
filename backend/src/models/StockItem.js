@@ -82,6 +82,10 @@ const stockItemSchema = new mongoose.Schema(
       enum: ['In Stock', 'Low Stock', 'Out of Stock'],
       default: 'In Stock',
     },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

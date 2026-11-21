@@ -5,7 +5,7 @@ import SectionHeading from '../components/SectionHeading.jsx';
 const stats = [
   { value: '15+', label: 'Years in business' },
   { value: '500+', label: 'Designs in stock' },
-  { value: '1,000+', label: 'Wholesale buyers' },
+  { value: '10,000+', label: 'Happy shoppers' },
   { value: '25+', label: 'States delivered to' },
 ];
 
@@ -16,18 +16,18 @@ const values = [
   },
   {
     title: 'Fair pricing',
-    text: 'Buying directly from manufacturers lets us keep prices reasonable for both retail and wholesale customers.',
+    text: 'Buying directly from manufacturers lets us keep prices reasonable for all our retail shoppers.',
   },
   {
     title: 'Long-term relationships',
-    text: 'Many of our wholesale buyers have been ordering from us for years. We aim to earn that trust on every order.',
+    text: 'Many of our customers have been ordering from us for years. We aim to earn that trust on every order.',
   },
 ];
 
 export default function About() {
   return (
     <>
-      <PageHeader title="About Us" text="A family-run clothing business serving customers across India." />
+      <PageHeader title="About Us" text="A family-run clothing business serving retail customers across India." />
 
       <section className="section">
         <div className="container two-col">
@@ -40,9 +40,8 @@ export default function About() {
               use and festive occasions.
             </p>
             <p>
-              Today we serve both individual customers and clothing businesses. Retail customers
-              can shop for their families, and shop owners, boutiques and resellers can buy in
-              bulk at wholesale rates.
+              Today we serve individual shoppers and families across India looking for top quality
+              fashion at direct manufacturer rates.
             </p>
             <p>
               Our goal is simple: good clothes, fair prices and honest service.

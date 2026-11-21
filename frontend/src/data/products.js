@@ -352,6 +352,28 @@ const defaultProducts = [
 export const categories = ['Men', 'Women', 'Kids'];
 
 let liveApiProducts = [];
+let isLiveApiLoaded = false;
+
+function getDeletedItems() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = localStorage.getItem('skt_deleted_items');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return new Set(arr.map((s) => String(s).toLowerCase().trim()));
+      }
+    }
+  } catch (_) {}
+  return new Set();
+}
+
+function isDeleted(product, deletedSet) {
+  if (!product || deletedSet.size === 0) return false;
+  if (product.id && deletedSet.has(String(product.id).toLowerCase().trim())) return true;
+  if (product.itemCode && deletedSet.has(String(product.itemCode).toLowerCase().trim())) return true;
+  if (product.name && deletedSet.has(product.name.toLowerCase().trim())) return true;
+  return false;
+}
 
 export function getCustomProducts() {
   try {
@@ -371,14 +393,47 @@ export function getCustomProducts() {
 export function saveCustomProduct(product) {
   try {
     const current = getCustomProducts();
-    const idx = current.findIndex((p) => String(p.id) === String(product.id));
+    const idx = current.findIndex(
+      (p) =>
+        String(p.id) === String(product.id) ||
+        (product.itemCode && p.itemCode === product.itemCode) ||
+        (product.name && p.name?.toLowerCase() === product.name?.toLowerCase())
+    );
     if (idx >= 0) {
       current[idx] = { ...current[idx], ...product };
     } else {
       current.unshift(product);
     }
+
+    // Also update in-memory liveApiProducts if present
+    const liveIdx = liveApiProducts.findIndex(
+      (p) =>
+        String(p.id) === String(product.id) ||
+        (product.itemCode && p.itemCode === product.itemCode) ||
+        (product.name && p.name?.toLowerCase() === product.name?.toLowerCase())
+    );
+    if (liveIdx >= 0) {
+      liveApiProducts[liveIdx] = { ...liveApiProducts[liveIdx], ...product };
+    }
+
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem('skt_custom_products', JSON.stringify(current));
+
+      // Remove from deleted list if it was re-added
+      try {
+        const rawDel = localStorage.getItem('skt_deleted_items');
+        if (rawDel) {
+          const arr = JSON.parse(rawDel);
+          const cleaned = arr.filter(
+            (val) =>
+              val !== String(product.id)?.toLowerCase() &&
+              val !== product.itemCode?.toLowerCase() &&
+              val !== product.name?.toLowerCase()
+          );
+          localStorage.setItem('skt_deleted_items', JSON.stringify(cleaned));
+        }
+      } catch (_) {}
+
       window.dispatchEvent(new Event('productsUpdated'));
     }
     return current;
@@ -387,15 +442,75 @@ export function saveCustomProduct(product) {
   }
 }
 
+export function deleteCustomProduct(idOrCode, name) {
+  try {
+    const idStr = String(idOrCode || '').toLowerCase().trim();
+    const nameStr = String(name || '').toLowerCase().trim();
+
+    // Remove from custom products
+    let current = getCustomProducts();
+    current = current.filter(
+      (p) =>
+        String(p.id).toLowerCase().trim() !== idStr &&
+        String(p.itemCode || '').toLowerCase().trim() !== idStr &&
+        (!nameStr || p.name?.toLowerCase().trim() !== nameStr)
+    );
+
+    // Remove from in-memory live products
+    liveApiProducts = liveApiProducts.filter(
+      (p) =>
+        String(p.id).toLowerCase().trim() !== idStr &&
+        String(p.itemCode || '').toLowerCase().trim() !== idStr &&
+        (!nameStr || p.name?.toLowerCase().trim() !== nameStr)
+    );
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('skt_custom_products', JSON.stringify(current));
+
+      // Also clean cached live products
+      const cached = localStorage.getItem('skt_cached_live_products');
+      if (cached) {
+        try {
+          const list = JSON.parse(cached);
+          const updated = list.filter(
+            (p) =>
+              String(p.id).toLowerCase().trim() !== idStr &&
+              String(p.itemCode || '').toLowerCase().trim() !== idStr &&
+              (!nameStr || p.name?.toLowerCase().trim() !== nameStr)
+          );
+          localStorage.setItem('skt_cached_live_products', JSON.stringify(updated));
+        } catch (_) {}
+      }
+
+      // Add to deleted items registry
+      try {
+        const raw = localStorage.getItem('skt_deleted_items');
+        const list = raw ? JSON.parse(raw) : [];
+        if (idStr && !list.includes(idStr)) list.push(idStr);
+        if (nameStr && !list.includes(nameStr)) list.push(nameStr);
+        localStorage.setItem('skt_deleted_items', JSON.stringify(list));
+      } catch (_) {}
+
+      window.dispatchEvent(new Event('productsUpdated'));
+    }
+    return current;
+  } catch (e) {
+    console.error('Error deleting product from client state', e);
+  }
+}
+
 export async function fetchLiveProducts() {
   try {
     const res = await fetch(`${API_URL}/products?limit=100`);
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data.products) && data.products.length > 0) {
+      if (Array.isArray(data.products)) {
         liveApiProducts = data.products;
+        isLiveApiLoaded = true;
         if (typeof window !== 'undefined') {
           try {
+            // Wipe any old custom products to ensure 100% exact sync with Admin Stock Management
+            localStorage.removeItem('skt_custom_products');
             localStorage.setItem('skt_cached_live_products', JSON.stringify(liveApiProducts));
           } catch (_) {}
           window.dispatchEvent(new Event('productsUpdated'));
@@ -410,20 +525,24 @@ export async function fetchLiveProducts() {
 // Load cached live products on startup if available
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
+    localStorage.removeItem('skt_custom_products');
+    localStorage.removeItem('skt_products');
     const cached = localStorage.getItem('skt_cached_live_products');
-    if (cached) liveApiProducts = JSON.parse(cached);
+    if (cached) {
+      liveApiProducts = JSON.parse(cached);
+      isLiveApiLoaded = true;
+    }
   } catch (_) {}
   // Fetch fresh products from backend
   fetchLiveProducts();
 }
 
 export function getAllProducts() {
-  const custom = getCustomProducts();
-  const combined = [...custom, ...liveApiProducts];
-  if (!combined || combined.length === 0) return defaultProducts;
-  const customIds = new Set(combined.map((p) => String(p.id)));
-  const rest = defaultProducts.filter((p) => !customIds.has(String(p.id)));
-  return [...combined, ...rest];
+  const deleted = getDeletedItems();
+  const live = liveApiProducts.filter((p) => !isDeleted(p, deleted));
+
+  // Single Source of Truth: ONLY return live products originating from Admin Stock Management!
+  return live;
 }
 
 export const products = new Proxy(defaultProducts, {
@@ -451,5 +570,5 @@ export function useProducts() {
 }
 
 export function getProductById(id) {
-  return getAllProducts().find((p) => String(p.id) === String(id));
+  return getAllProducts().find((p) => String(p.id) === String(id) || (p.itemCode && p.itemCode === id));
 }

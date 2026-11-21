@@ -19,7 +19,7 @@ const reasons = [
   },
   {
     title: 'Fair Prices',
-    text: 'Direct sourcing from manufacturers keeps our retail prices reasonable and wholesale rates competitive.',
+    text: 'Direct sourcing from manufacturers keeps our retail prices affordable with unbeatable value.',
   },
   {
     title: 'Easy Returns',
@@ -33,8 +33,14 @@ const reasons = [
 
 export default function Home() {
   const allProducts = useProducts();
-  const featured = allProducts.filter((p) => p.featured).slice(0, 8);
-  const newArrivals = allProducts.filter((p) => p.isNew).slice(0, 4);
+  const featured = (allProducts.filter((p) => p.featured).length > 0
+    ? allProducts.filter((p) => p.featured)
+    : allProducts
+  ).slice(0, 8);
+  const newArrivals = (allProducts.filter((p) => p.isNew).length > 0
+    ? allProducts.filter((p) => p.isNew)
+    : allProducts
+  ).slice(0, 4);
 
   return (
     <>
@@ -52,8 +58,8 @@ export default function Home() {
               <Link to="/products" className="btn btn-primary">
                 Shop Now
               </Link>
-              <Link to="/wholesale" className="btn btn-outline">
-                Wholesale Enquiry
+              <Link to="/women" className="btn btn-outline">
+                Explore Collection
               </Link>
             </div>
           </div>
@@ -107,25 +113,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Wholesale */}
+      {/* Retail Benefits Banner */}
       <section className="section section-soft">
         <div className="container wholesale-banner">
           <div>
-            <h2>Buying in bulk? Get wholesale rates.</h2>
+            <h2>Direct Manufacturer Prices. Unbeatable Value.</h2>
             <p>
-              We supply retailers, boutiques and resellers with ready stock and bulk orders. Lower
-              prices per piece, mixed size sets and regular new designs.
+              Shop fashion for the entire family at direct-from-weaver retail prices.
+              Affordable daily wear, festive collections, and simple UPI checkout with fast doorstep delivery.
             </p>
-            <Link to="/wholesale" className="btn btn-primary">
-              Wholesale Enquiry
+            <Link to="/products" className="btn btn-primary">
+              Start Shopping
             </Link>
           </div>
           <div className="wholesale-points">
             <ul className="check-list">
-              <li>Minimum order of just 20 pieces per design</li>
-              <li>Special rates on bulk quantities</li>
-              <li>Mixed size and colour sets available</li>
-              <li>Dispatch to any city in India</li>
+              <li>Direct manufacturer pricing on all items</li>
+              <li>100% Quality inspected fabrics</li>
+              <li>Instant, secure UPI payment</li>
+              <li>Reliable doorstep delivery across India</li>
             </ul>
           </div>
         </div>

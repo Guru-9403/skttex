@@ -10,6 +10,10 @@ export const autoSeedStockIfNeeded = async (userId) => {
   const count = await StockItem.countDocuments();
   if (count > 0) return;
 
+  // If there is transaction history, the store has already been initialized and items may have been cleared
+  const txCount = await StockTransaction.countDocuments();
+  if (txCount > 0) return;
+
   const products = await Product.find();
   if (!products || products.length === 0) return;
 
@@ -312,7 +316,9 @@ export const createStockItem = asyncHandler(async (req, res) => {
         Kids: 'Kids',
         General: 'Women',
       };
-      await Product.create({
+      const createdProd = await Product.create({
+        itemCode: item.itemCode,
+        stockItemId: item._id,
         name: item.name,
         category: catMap[item.category] || (['Men', 'Women', 'Kids'].includes(item.category) ? item.category : 'Women'),
         type: item.type || 'Clothing',
@@ -330,7 +336,12 @@ export const createStockItem = asyncHandler(async (req, res) => {
         description: item.description || item.name,
         featured: true,
         newArrival: true,
+        inStock: item.currentStock > 0,
+        currentStock: item.currentStock,
       });
+
+      item.productId = createdProd._id;
+      await item.save();
     } catch (syncErr) {
       console.warn('Could not sync stock item to storefront products:', syncErr.message);
     }
@@ -349,20 +360,29 @@ export const updateStockItem = asyncHandler(async (req, res) => {
     throw new HttpError(404, 'Stock item not found');
   }
 
+  const oldName = item.name;
+  const oldCode = item.itemCode;
+
   const {
     name,
     category,
     unit,
+    type,
+    image,
     openingStock,
     lowStockThreshold,
     purchasePrice,
     sellingPrice,
     description,
+    fabric,
+    sizes,
   } = req.body;
 
   if (name !== undefined) item.name = name.trim();
   if (category !== undefined) item.category = category.trim();
   if (unit !== undefined) item.unit = unit.trim();
+  if (type !== undefined) item.type = type.trim();
+  if (image !== undefined) item.image = image.trim();
   if (description !== undefined) item.description = description.trim();
   if (purchasePrice !== undefined) item.purchasePrice = Math.max(0, Number(purchasePrice));
   if (sellingPrice !== undefined) item.sellingPrice = Math.max(0, Number(sellingPrice));
@@ -385,18 +405,68 @@ export const updateStockItem = asyncHandler(async (req, res) => {
   item.recalculateStock();
   await item.save();
 
-  // Keep storefront Product in sync if it exists
+  // Keep storefront Product in sync if it exists or create if missing
   try {
-    await Product.findOneAndUpdate(
-      { name: item.name },
-      {
-        price: item.sellingPrice,
-        oldPrice: Math.round(item.sellingPrice * 1.25),
-        image: item.image || '',
-        fabric: req.body.fabric,
-        description: item.description,
+    const catMap = {
+      Sarees: 'Women',
+      Kurtas: 'Men',
+      Suits: 'Women',
+      Men: 'Men',
+      Women: 'Women',
+      Kids: 'Kids',
+      General: 'Women',
+    };
+    const targetCat = catMap[item.category] || (['Men', 'Women', 'Kids'].includes(item.category) ? item.category : 'Women');
+
+    const updateFields = {
+      name: item.name,
+      itemCode: item.itemCode,
+      stockItemId: item._id,
+      category: targetCat,
+      type: item.type || 'Clothing',
+      price: item.sellingPrice,
+      oldPrice: Math.round(item.sellingPrice * 1.25),
+      image: item.image || '',
+      description: item.description || item.name,
+      inStock: item.currentStock > 0,
+      currentStock: item.currentStock,
+    };
+    if (fabric) updateFields.fabric = fabric;
+    if (sizes) {
+      updateFields.sizes = typeof sizes === 'string'
+        ? sizes.split(',').map((s) => s.trim()).filter(Boolean)
+        : sizes;
+    }
+
+    const searchConditions = [
+      { stockItemId: item._id },
+      { itemCode: oldCode || item.itemCode },
+      { name: oldName },
+    ];
+    if (item.productId) {
+      searchConditions.unshift({ _id: item.productId });
+    }
+
+    let prod = await Product.findOne({ $or: searchConditions });
+    if (prod) {
+      Object.assign(prod, updateFields);
+      await prod.save();
+      if (!item.productId) {
+        item.productId = prod._id;
+        await item.save();
       }
-    );
+    } else {
+      prod = await Product.create({
+        ...updateFields,
+        sizes: updateFields.sizes || ['Free Size'],
+        colors: [{ name: 'Standard', hex: '#b8405e' }],
+        tint: '#fdf5f7',
+        featured: true,
+        newArrival: true,
+      });
+      item.productId = prod._id;
+      await item.save();
+    }
   } catch (e) {
     console.warn('Failed to update storefront Product sync:', e.message);
   }
@@ -406,7 +476,8 @@ export const updateStockItem = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/stock/items/:id
- * Delete stock item (Admin only - protected against items with movements)
+ * Delete stock item (Admin only)
+ * Cascades deletion to corresponding storefront Product!
  */
 export const deleteStockItem = asyncHandler(async (req, res) => {
   const item = await StockItem.findById(req.params.id);
@@ -414,24 +485,33 @@ export const deleteStockItem = asyncHandler(async (req, res) => {
     throw new HttpError(404, 'Stock item not found');
   }
 
-  // Check if transactions other than initial opening balance exist
-  const transCount = await StockTransaction.countDocuments({
-    stockItem: item._id,
-    referenceNumber: { $ne: 'OPENING-BALANCE' },
-  });
+  // Delete all transaction history for this item
+  await StockTransaction.deleteMany({ stockItem: item._id });
 
-  if (transCount > 0) {
-    throw new HttpError(
-      400,
-      `Cannot delete "${item.name}" because it has ${transCount} inward/outward transactions. Items with transaction history must be preserved for audit compliance.`
-    );
+  // CASCADE DELETE: Delete corresponding Product from the storefront catalog
+  try {
+    const searchConditions = [
+      { stockItemId: item._id },
+      { itemCode: item.itemCode },
+      { name: item.name },
+    ];
+    if (item.productId) {
+      searchConditions.unshift({ _id: item.productId });
+    }
+    await Product.deleteMany({ $or: searchConditions });
+  } catch (prodErr) {
+    console.warn('Failed to cascade delete storefront Product:', prodErr.message);
   }
 
-  // Delete opening transaction and item
-  await StockTransaction.deleteMany({ stockItem: item._id });
+  // Delete the stock item itself
   await StockItem.findByIdAndDelete(item._id);
 
-  res.json({ message: `Item "${item.name}" deleted successfully` });
+  res.json({
+    message: `Item "${item.name}" deleted successfully`,
+    deletedItemCode: item.itemCode,
+    deletedName: item.name,
+    deletedId: item._id,
+  });
 });
 
 /**
@@ -492,6 +572,20 @@ export const recordInwardStock = asyncHandler(async (req, res) => {
     createdBy: req.user._id,
     createdByName: req.user.name || 'Admin',
   });
+
+  // Sync to storefront Product catalog
+  try {
+    const searchConditions = [
+      { stockItemId: item._id },
+      { itemCode: item.itemCode },
+      { name: item.name },
+    ];
+    if (item.productId) searchConditions.unshift({ _id: item.productId });
+    await Product.updateMany(
+      { $or: searchConditions },
+      { inStock: item.currentStock > 0, currentStock: item.currentStock }
+    );
+  } catch (_) {}
 
   res.status(201).json({
     message: `Successfully received ${qty} ${item.unit} of "${item.name}". Current stock is now ${item.currentStock}.`,
@@ -567,6 +661,20 @@ export const recordOutwardStock = asyncHandler(async (req, res) => {
     createdBy: req.user._id,
     createdByName: req.user.name || 'Admin',
   });
+
+  // Sync to storefront Product catalog
+  try {
+    const searchConditions = [
+      { stockItemId: item._id },
+      { itemCode: item.itemCode },
+      { name: item.name },
+    ];
+    if (item.productId) searchConditions.unshift({ _id: item.productId });
+    await Product.updateMany(
+      { $or: searchConditions },
+      { inStock: item.currentStock > 0, currentStock: item.currentStock }
+    );
+  } catch (_) {}
 
   res.status(201).json({
     message: `Successfully issued ${qty} ${item.unit} of "${item.name}". Current stock is now ${item.currentStock}.`,

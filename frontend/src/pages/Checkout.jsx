@@ -71,8 +71,8 @@ export default function Checkout() {
 
   const confirmPaid = () => {
     const cleanUtr = utr.trim();
-    if (!/^\d{12}$/.test(cleanUtr)) {
-      setUtrError('Please enter the authentic 12-digit UPI transaction / UTR reference number from your payment app');
+    if (!cleanUtr || cleanUtr.length < 4) {
+      setUtrError('Please enter the UPI transaction reference or UTR number from your payment app');
       return;
     }
     placeOrder({
@@ -191,20 +191,18 @@ export default function Checkout() {
 
                 <div className="co-paid">
                   <label className="co-field">
-                    <span>Enter 12-digit UPI Transaction / UTR Number *</span>
+                    <span>Enter UPI Transaction Reference / UTR Number *</span>
                     <input
                       value={utr}
                       onChange={(e) => {
-                        setUtr(e.target.value.replace(/\D/g, ''));
+                        setUtr(e.target.value.trim());
                         setUtrError('');
                       }}
-                      inputMode="numeric"
-                      maxLength={12}
-                      placeholder="e.g. 412345678901"
+                      placeholder="e.g. 412345678901 or UPI Ref ID"
                     />
                     {utrError && <small className="co-error">{utrError}</small>}
                     <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4 }}>
-                      💡 Found on your UPI app transaction details page (UTR / UPI Ref No. / Transaction ID)
+                      💡 Found on your payment app screen (UTR / UPI Ref No. / Transaction ID)
                     </span>
                   </label>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 14 }}>

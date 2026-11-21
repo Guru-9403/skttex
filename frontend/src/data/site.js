@@ -13,7 +13,6 @@ export const navLinks = [
   { label: 'Men', to: '/men' },
   { label: 'Women', to: '/women' },
   { label: 'Kids', to: '/kids' },
-  { label: 'Wholesale', to: '/wholesale' },
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ];

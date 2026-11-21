@@ -1,4 +1,4 @@
-import { saveCustomProduct } from '../data/products.js';
+import { deleteCustomProduct, fetchLiveProducts } from '../data/products.js';
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -285,38 +285,10 @@ export default function AdminStock() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Operation failed');
 
-      // Also sync to customer storefront cards
-      try {
-        const catMap = {
-          'Sarees': 'Women',
-          'Kurtas': 'Men',
-          'Suits': 'Women',
-          'Men': 'Men',
-          'Women': 'Women',
-          'Kids': 'Kids',
-          'General': 'Women'
-        };
-        saveCustomProduct({
-          id: itemForm.itemCode,
-          name: itemForm.name,
-          category: catMap[itemForm.category] || itemForm.category,
-          type: itemForm.type || 'Clothing',
-          price: Number(itemForm.sellingPrice) || 0,
-          oldPrice: Math.round((Number(itemForm.sellingPrice) || 0) * 1.25),
-          sizes: itemForm.sizes ? itemForm.sizes.split(',').map(s => s.trim()).filter(Boolean) : ['Free Size'],
-          colors: [{ name: 'Standard', hex: '#b8405e' }],
-          tint: '#fdf5f7',
-          fabric: itemForm.fabric || 'Premium Fabric',
-          image: itemForm.image || '',
-          isNew: true,
-          featured: true,
-          description: itemForm.description || itemForm.name,
-        });
-      } catch (err) {
-        console.warn('Could not sync to storefront:', err);
-      }
+      // Refresh customer storefront products directly from live database
+      await fetchLiveProducts();
 
-      setSuccessMsg(editingItem ? 'Stock item updated & synced to cards!' : 'New item created & added to storefront cards!');
+      setSuccessMsg(editingItem ? 'Stock item updated & synced to website!' : 'New item created & added to website store!');
       setShowItemModal(false);
       fetchItems();
       fetchDashboard();
@@ -329,7 +301,7 @@ export default function AdminStock() {
 
   // Delete Stock Item
   const handleDeleteItem = async (item) => {
-    if (!window.confirm(`Are you sure you want to delete "${item.name}" (${item.itemCode})?`)) {
+    if (!window.confirm(`Are you sure you want to delete "${item.name}" (${item.itemCode})? This will also remove the card from the customer website.`)) {
       return;
     }
 
@@ -342,7 +314,11 @@ export default function AdminStock() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete item');
 
-      setSuccessMsg(`Deleted item: ${item.name}`);
+      // Also remove immediately from website storefront cards and cache
+      deleteCustomProduct(item.itemCode, item.name);
+      await fetchLiveProducts();
+
+      setSuccessMsg(`Deleted "${item.name}" from stock and removed card from website!`);
       fetchItems();
       fetchDashboard();
     } catch (err) {
@@ -490,6 +466,29 @@ export default function AdminStock() {
           </div>
 
           <div className="stock-header-actions">
+            <button
+              onClick={async () => {
+                localStorage.removeItem('skt_cached_live_products');
+                localStorage.removeItem('skt_custom_products');
+                localStorage.removeItem('skt_deleted_items');
+                await fetchLiveProducts();
+                fetchItems();
+                setSuccessMsg('Storefront cache cleared and re-synced with database!');
+              }}
+              title="Resync customer storefront cards with database"
+              style={{
+                backgroundColor: '#4f46e5',
+                color: '#fff',
+                padding: '10px 16px',
+                borderRadius: '6px',
+                fontWeight: '600',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Resync Store
+            </button>
+
             <button
               onClick={handleExportExcel}
               disabled={exporting}

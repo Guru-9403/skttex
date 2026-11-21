@@ -27,15 +27,7 @@ export const register = asyncHandler(async (req, res) => {
     throw new HttpError(400, 'Password must be at least 6 characters');
   }
 
-  const customerType = req.body.customerType || 'retail';
-  if (!['retail', 'wholesale'].includes(customerType)) {
-    throw new HttpError(400, 'customerType must be "retail" or "wholesale"');
-  }
-
-  const businessName = optionalString(req.body.businessName);
-  if (customerType === 'wholesale' && !businessName) {
-    throw new HttpError(400, 'Business name is required for wholesale accounts');
-  }
+  const customerType = 'retail';
 
   const email = req.body.email.trim().toLowerCase();
   if (await User.findOne({ email })) {

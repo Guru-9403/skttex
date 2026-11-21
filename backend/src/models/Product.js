@@ -10,6 +10,8 @@ const colorSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
   {
+    itemCode: { type: String, trim: true, uppercase: true },
+    stockItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'StockItem' },
     name: { type: String, required: [true, 'Product name is required'], trim: true },
     category: {
       type: String,
@@ -29,6 +31,8 @@ const productSchema = new mongoose.Schema(
     // "isNew" is a reserved name in Mongoose, so it is stored as newArrival
     // and returned as isNew in API responses (see toJSON below).
     newArrival: { type: Boolean, default: false },
+    inStock: { type: Boolean, default: true },
+    currentStock: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

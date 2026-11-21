@@ -1,10 +1,13 @@
 import mongoose from 'mongoose';
 import Product from '../models/Product.js';
+import StockItem from '../models/StockItem.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
 import { queryString, escapeRegex } from '../utils/validators.js';
 
 const EDITABLE_FIELDS = [
+  'itemCode',
+  'stockItemId',
   'name',
   'category',
   'type',
@@ -17,6 +20,8 @@ const EDITABLE_FIELDS = [
   'fabric',
   'description',
   'featured',
+  'inStock',
+  'currentStock',
 ];
 
 // Only allow known fields. The API uses "isNew", the database field is "newArrival".
@@ -37,6 +42,23 @@ async function findProductOr404(id) {
 
 // GET /api/products?category=&type=&q=&featured=&isNew=&sort=&page=&limit=
 export const listProducts = asyncHandler(async (req, res) => {
+  // Enforce single source of truth: only items present in Admin StockItem are valid
+  const activeStockItems = await StockItem.find({}, { name: 1, itemCode: 1, _id: 1 });
+  const activeStockIds = activeStockItems.map((s) => s._id);
+  const activeStockCodes = activeStockItems.map((s) => s.itemCode).filter(Boolean);
+  const activeStockNames = activeStockItems.map((s) => s.name).filter(Boolean);
+
+  // Automatically delete any orphan products from the database that don't exist in stock
+  if (activeStockItems.length > 0) {
+    await Product.deleteMany({
+      stockItemId: { $nin: activeStockIds },
+      itemCode: { $nin: activeStockCodes },
+      name: { $nin: activeStockNames },
+    });
+  } else {
+    await Product.deleteMany({});
+  }
+
   const filter = {};
 
   const category = queryString(req.query.category);

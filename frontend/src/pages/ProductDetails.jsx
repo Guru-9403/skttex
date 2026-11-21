@@ -37,8 +37,10 @@ export default function ProductDetails() {
     .slice(0, 4);
 
   const selectedColor = product.colors[colorIndex];
+  const isOutOfStock = product.inStock === false || product.currentStock === 0 || product.status === 'Out of Stock';
 
   const addToCart = () => {
+    if (isOutOfStock) return false;
     if (!size) { setSizeError(true); return false; }
     addItem({ productId: product.id, size, colorIndex, qty });
     return true;
@@ -67,6 +69,11 @@ export default function ProductDetails() {
               {formatPrice(product.price)}
               {product.oldPrice && <span className="old-price">{formatPrice(product.oldPrice)}</span>}
             </p>
+            {isOutOfStock && (
+              <span className="badge" style={{ background: '#64748b', color: '#ffffff', display: 'inline-block', marginBottom: '0.75rem', padding: '0.35rem 0.75rem', borderRadius: '4px', fontSize: '0.85rem' }}>
+                Currently Out of Stock
+              </span>
+            )}
             <p className="details-note">Inclusive of all taxes</p>
 
             <p className="details-desc">{product.description}</p>
@@ -124,10 +131,22 @@ export default function ProductDetails() {
             </div>
 
             <div className="details-actions">
-              <button type="button" className="btn btn-primary" onClick={() => addToCart() && navigate('/cart')}>
-                Add to Cart
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={isOutOfStock}
+                style={isOutOfStock ? { background: '#94a3b8', borderColor: '#94a3b8', cursor: 'not-allowed' } : {}}
+                onClick={() => addToCart() && navigate('/cart')}
+              >
+                {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
               </button>
-              <button type="button" className="btn btn-outline" onClick={() => addToCart() && navigate('/checkout')}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={isOutOfStock}
+                style={isOutOfStock ? { borderColor: '#94a3b8', color: '#94a3b8', cursor: 'not-allowed' } : {}}
+                onClick={() => addToCart() && navigate('/checkout')}
+              >
                 Buy Now
               </button>
               <button
@@ -162,8 +181,8 @@ export default function ProductDetails() {
               </tbody>
             </table>
 
-            <p className="wholesale-note">
-              Need this in bulk for your shop? <Link to="/wholesale">Send a wholesale enquiry</Link>
+            <p className="wholesale-note" style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+              ✨ 100% Genuine Quality Fabrics &bull; Safe UPI Payment
             </p>
           </div>
         </div>

@@ -4,7 +4,7 @@ import Order from '../models/Order.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
 import { requireStrings, optionalString, queryString } from '../utils/validators.js';
-import { computeTotals, WHOLESALE_MIN_QTY } from '../config/pricing.js';
+import { computeTotals } from '../config/pricing.js';
 
 const STATUSES = ['placed', 'confirmed', 'shipped', 'delivered', 'cancelled'];
 
@@ -42,15 +42,12 @@ export const createOrder = asyncHandler(async (req, res) => {
     qty: item.qty,
   }));
 
-  const totals = computeTotals(items, req.user.customerType);
-  if (!totals.meetsMinimum) {
-    throw new HttpError(400, `Wholesale orders need at least ${WHOLESALE_MIN_QTY} pieces in total`);
-  }
+  const totals = computeTotals(items);
 
   const order = await Order.create({
     orderNumber: generateOrderNumber(),
     user: req.user._id,
-    customerType: req.user.customerType,
+    customerType: 'retail',
     items,
     shippingAddress: {
       fullName: address.fullName.trim(),

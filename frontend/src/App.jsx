@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
@@ -13,7 +13,6 @@ import Women from './pages/Women.jsx';
 import Kids from './pages/Kids.jsx';
 import ProductListing from './pages/ProductListing.jsx';
 import ProductDetails from './pages/ProductDetails.jsx';
-import Wholesale from './pages/Wholesale.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import Cart from './pages/Cart.jsx';
@@ -35,7 +34,7 @@ export default function App() {
           <Route path="/kids" element={<Kids />} />
           <Route path="/products" element={<ProductListing />} />
           <Route path="/product/:id" element={<ProductDetails />} />
-          <Route path="/wholesale" element={<Wholesale />} />
+          <Route path="/wholesale" element={<Navigate to="/products" replace />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/cart" element={<Cart />} />

@@ -34,18 +34,13 @@ export default function Login() {
         setLocalError('Please enter your full name.');
         return;
       }
-      if (form.customerType === 'wholesale' && !form.businessName.trim()) {
-        setLocalError('Business name is required for wholesale accounts.');
-        return;
-      }
 
       const res = await register({
         name: form.name,
         email: form.email,
         password: form.password,
         phone: form.phone,
-        customerType: form.customerType,
-        businessName: form.businessName,
+        customerType: 'retail',
       });
 
       if (res.success) {
@@ -191,35 +186,6 @@ export default function Login() {
                   onChange={handleChange}
                 />
               </div>
-
-              <div className="form-field">
-                <label htmlFor="r-customerType">Account Type</label>
-                <select
-                  id="r-customerType"
-                  name="customerType"
-                  value={form.customerType}
-                  onChange={handleChange}
-                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                >
-                  <option value="retail">Retail Customer</option>
-                  <option value="wholesale">Wholesale / Trade Buyer</option>
-                </select>
-              </div>
-
-              {form.customerType === 'wholesale' && (
-                <div className="form-field">
-                  <label htmlFor="r-businessName">Business / Company Name</label>
-                  <input
-                    id="r-businessName"
-                    name="businessName"
-                    type="text"
-                    placeholder="e.g. Tex Enterprises"
-                    value={form.businessName}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              )}
             </>
           )}
 

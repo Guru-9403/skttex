@@ -8,8 +8,7 @@ export default function Footer() {
         <div className="footer-col footer-about">
           <h3 className="footer-logo">{site.name}</h3>
           <p>
-            Everyday and festive clothing for men, women and kids. We serve retail customers and
-            wholesale buyers across India.
+            Everyday and festive clothing for men, women and kids at honest retail prices with direct delivery across India.
           </p>
         </div>
 
@@ -27,7 +26,6 @@ export default function Footer() {
           <h4>Company</h4>
           <ul>
             <li><Link to="/about">About Us</Link></li>
-            <li><Link to="/wholesale">Wholesale</Link></li>
             <li><Link to="/contact">Contact</Link></li>
             <li><Link to="/login">Login</Link></li>
           </ul>
