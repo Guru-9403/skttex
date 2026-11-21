@@ -8,6 +8,7 @@ import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import enquiryRoutes from './routes/enquiryRoutes.js';
 import stockRoutes from './routes/stockRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 import { notFound, errorHandler } from './middleware/error.js';
 
 const app = express();
@@ -47,7 +48,8 @@ const corsOptions = {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // enable pre-flight for all routes
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.get('/', (req, res) => {
   res.json({
@@ -68,6 +70,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

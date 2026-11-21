@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import SectionHeading from '../components/SectionHeading.jsx';
 import ProductGrid from '../components/ProductGrid.jsx';
-import { products } from '../data/products.js';
+import { useProducts } from '../data/products.js';
 
 const heroImg = new URL('../assets/img/Girls Lehenga Choli.jpg', import.meta.url).href;
 
@@ -32,8 +32,9 @@ const reasons = [
 ];
 
 export default function Home() {
-  const featured = products.filter((p) => p.featured).slice(0, 8);
-  const newArrivals = products.filter((p) => p.isNew).slice(0, 4);
+  const allProducts = useProducts();
+  const featured = allProducts.filter((p) => p.featured).slice(0, 8);
+  const newArrivals = allProducts.filter((p) => p.isNew).slice(0, 4);
 
   return (
     <>

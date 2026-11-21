@@ -58,6 +58,7 @@ export default function AdminStock() {
   const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Check admin authorization
   useEffect(() => {
@@ -220,6 +221,44 @@ export default function AdminStock() {
       notes: 'Stock dispatch / counter sale',
     });
     setShowOutwardModal(true);
+  };
+
+  // Upload image to Cloudinary via backend API
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+    setUploadingImage(true);
+    setErrorMsg('');
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch(`${API_URL}/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Image upload to Cloudinary failed');
+      }
+
+      setItemForm((prev) => ({ ...prev, image: data.url }));
+      setSuccessMsg('Image uploaded to Cloudinary successfully!');
+    } catch (err) {
+      console.warn('Cloudinary upload warning:', err);
+      // Fallback to local data URI preview if upload is blocked by Cloudinary key permission
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setItemForm((prev) => ({ ...prev, image: ev.target.result }));
+      };
+      reader.readAsDataURL(file);
+      setErrorMsg(`Cloudinary Upload Notice: ${err.message}. Using local image preview.`);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   // Submit Add / Edit Stock Item
@@ -1017,25 +1056,22 @@ export default function AdminStock() {
                 />
               </div>
 
-              {/* Product Image Function (File upload or URL) */}
+              {/* Product Image Function (Cloudinary upload or URL) */}
               <div style={{ marginTop: '15px', background: '#fdf5f7', padding: '12px 14px', borderRadius: '8px', border: '1px solid #f2d4dc' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#111827' }}>
-                  📷 Product Image (Add image function)
+                  📷 Product Image (Cloudinary Upload)
                 </label>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <label style={{ cursor: 'pointer', background: 'var(--primary, #b8405e)', color: '#fff', padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
-                    📁 Choose Image File
+                  <label style={{ cursor: uploadingImage ? 'not-allowed' : 'pointer', background: uploadingImage ? '#9ca3af' : 'var(--primary, #b8405e)', color: '#fff', padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                    {uploadingImage ? '⏳ Uploading...' : '📁 Choose Image File'}
                     <input
                       type="file"
                       accept="image/*"
+                      disabled={uploadingImage}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            setItemForm((prev) => ({ ...prev, image: ev.target.result }));
-                          };
-                          reader.readAsDataURL(file);
+                          handleImageUpload(file);
                         }
                       }}
                       style={{ display: 'none' }}
@@ -1044,12 +1080,17 @@ export default function AdminStock() {
                   <span style={{ fontSize: '12px', color: '#6b7280' }}>OR paste URL:</span>
                   <input
                     type="url"
-                    placeholder="https://example.com/photo.jpg"
+                    placeholder="https://res.cloudinary.com/... or https://example.com/photo.jpg"
                     value={itemForm.image?.startsWith('data:') ? '' : (itemForm.image || '')}
                     onChange={(e) => setItemForm({ ...itemForm, image: e.target.value })}
                     style={{ flex: 1, minWidth: '180px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px' }}
                   />
                 </div>
+                {uploadingImage && (
+                  <p style={{ fontSize: '12px', color: '#b8405e', marginTop: '6px', fontWeight: '500' }}>
+                    Uploading to Cloudinary... please wait.
+                  </p>
+                )}
                 {itemForm.image && (
                   <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <img
@@ -1058,7 +1099,9 @@ export default function AdminStock() {
                       style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '2px solid var(--primary, #b8405e)' }}
                     />
                     <div>
-                      <span style={{ fontSize: '12px', color: '#059669', fontWeight: '600' }}>✓ Image ready to attach to card</span>
+                      <span style={{ fontSize: '12px', color: '#059669', fontWeight: '600' }}>
+                        {itemForm.image.includes('cloudinary') ? '☁️ Cloudinary image attached' : '✓ Image ready to attach to card'}
+                      </span>
                       <button
                         type="button"
                         onClick={() => setItemForm({ ...itemForm, image: '' })}

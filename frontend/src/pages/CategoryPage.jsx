@@ -1,10 +1,11 @@
 import PageHeader from '../components/PageHeader.jsx';
 import ProductGrid from '../components/ProductGrid.jsx';
-import { products } from '../data/products.js';
+import { useProducts } from '../data/products.js';
 
 // Shared layout for the Men, Women and Kids pages.
 export default function CategoryPage({ category, title, text }) {
-  const items = products.filter((p) => p.category === category);
+  const allProducts = useProducts();
+  const items = allProducts.filter((p) => p.category === category);
 
   return (
     <>

@@ -300,6 +300,42 @@ export const createStockItem = asyncHandler(async (req, res) => {
     });
   }
 
+  // Sync to customer storefront Product catalog if requested
+  if (req.body.addToStore !== false) {
+    try {
+      const catMap = {
+        Sarees: 'Women',
+        Kurtas: 'Men',
+        Suits: 'Women',
+        Men: 'Men',
+        Women: 'Women',
+        Kids: 'Kids',
+        General: 'Women',
+      };
+      await Product.create({
+        name: item.name,
+        category: catMap[item.category] || (['Men', 'Women', 'Kids'].includes(item.category) ? item.category : 'Women'),
+        type: item.type || 'Clothing',
+        price: item.sellingPrice,
+        oldPrice: Math.round(item.sellingPrice * 1.25),
+        sizes: req.body.sizes
+          ? typeof req.body.sizes === 'string'
+            ? req.body.sizes.split(',').map((s) => s.trim()).filter(Boolean)
+            : req.body.sizes
+          : ['Free Size'],
+        colors: [{ name: 'Standard', hex: '#b8405e' }],
+        fabric: req.body.fabric || 'Cotton Blend',
+        image: item.image || '',
+        tint: '#fdf5f7',
+        description: item.description || item.name,
+        featured: true,
+        newArrival: true,
+      });
+    } catch (syncErr) {
+      console.warn('Could not sync stock item to storefront products:', syncErr.message);
+    }
+  }
+
   res.status(201).json({ message: 'Stock item created successfully', item });
 });
 
@@ -348,6 +384,22 @@ export const updateStockItem = asyncHandler(async (req, res) => {
   item.updatedBy = req.user._id;
   item.recalculateStock();
   await item.save();
+
+  // Keep storefront Product in sync if it exists
+  try {
+    await Product.findOneAndUpdate(
+      { name: item.name },
+      {
+        price: item.sellingPrice,
+        oldPrice: Math.round(item.sellingPrice * 1.25),
+        image: item.image || '',
+        fabric: req.body.fabric,
+        description: item.description,
+      }
+    );
+  } catch (e) {
+    console.warn('Failed to update storefront Product sync:', e.message);
+  }
 
   res.json({ message: 'Stock item updated successfully', item });
 });

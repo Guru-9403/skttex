@@ -12,6 +12,7 @@ const EDITABLE_FIELDS = [
   'oldPrice',
   'sizes',
   'colors',
+  'image',
   'tint',
   'fabric',
   'description',

@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader.jsx';
 import ProductGrid from '../components/ProductGrid.jsx';
-import { products, categories } from '../data/products.js';
+import { useProducts, categories } from '../data/products.js';
 
 export default function ProductListing() {
+  const allProducts = useProducts();
   const [params, setParams] = useSearchParams();
   const [sort, setSort] = useState('featured');
 
@@ -12,7 +13,7 @@ export default function ProductListing() {
   const type = params.get('type');
   const query = (params.get('q') || '').trim();
 
-  let list = products.filter((p) => {
+  let list = allProducts.filter((p) => {
     const matchCategory = category === 'All' || p.category === category;
     const matchType = !type || p.type === type;
     const matchQuery =

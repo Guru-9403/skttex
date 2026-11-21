@@ -1,3 +1,6 @@
+import { useState, useEffect } from 'react';
+import { API_URL } from '../config/api.js';
+
 const getImg = (name) => new URL(`../assets/img/${name}`, import.meta.url).href;
 // Sample product data. Images are placeholders (a tinted block with the product type).
 // Later this can be replaced with data from an API / database.
@@ -348,6 +351,8 @@ const defaultProducts = [
 
 export const categories = ['Men', 'Women', 'Kids'];
 
+let liveApiProducts = [];
+
 export function getCustomProducts() {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -382,12 +387,43 @@ export function saveCustomProduct(product) {
   }
 }
 
-function getAllProducts() {
+export async function fetchLiveProducts() {
+  try {
+    const res = await fetch(`${API_URL}/products?limit=100`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.products) && data.products.length > 0) {
+        liveApiProducts = data.products;
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('skt_cached_live_products', JSON.stringify(liveApiProducts));
+          } catch (_) {}
+          window.dispatchEvent(new Event('productsUpdated'));
+        }
+      }
+    }
+  } catch (e) {
+    // offline or backend sleeping
+  }
+}
+
+// Load cached live products on startup if available
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    const cached = localStorage.getItem('skt_cached_live_products');
+    if (cached) liveApiProducts = JSON.parse(cached);
+  } catch (_) {}
+  // Fetch fresh products from backend
+  fetchLiveProducts();
+}
+
+export function getAllProducts() {
   const custom = getCustomProducts();
-  if (!custom || custom.length === 0) return defaultProducts;
-  const customIds = new Set(custom.map((p) => String(p.id)));
+  const combined = [...custom, ...liveApiProducts];
+  if (!combined || combined.length === 0) return defaultProducts;
+  const customIds = new Set(combined.map((p) => String(p.id)));
   const rest = defaultProducts.filter((p) => !customIds.has(String(p.id)));
-  return [...custom, ...rest];
+  return [...combined, ...rest];
 }
 
 export const products = new Proxy(defaultProducts, {
@@ -401,6 +437,19 @@ export const products = new Proxy(defaultProducts, {
   },
 });
 
+export function useProducts() {
+  const [items, setItems] = useState(() => getAllProducts());
+
+  useEffect(() => {
+    const handler = () => setItems(getAllProducts());
+    window.addEventListener('productsUpdated', handler);
+    fetchLiveProducts();
+    return () => window.removeEventListener('productsUpdated', handler);
+  }, []);
+
+  return items;
+}
+
 export function getProductById(id) {
-  return products.find((p) => String(p.id) === String(id));
+  return getAllProducts().find((p) => String(p.id) === String(id));
 }

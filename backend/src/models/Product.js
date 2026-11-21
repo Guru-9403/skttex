@@ -21,6 +21,7 @@ const productSchema = new mongoose.Schema(
     oldPrice: { type: Number, min: 0, default: null },
     sizes: { type: [String], default: [] },
     colors: { type: [colorSchema], default: [] },
+    image: { type: String, default: '', trim: true },
     tint: { type: String, default: '#eeeeee' }, // placeholder image colour (until real images are added)
     fabric: { type: String, trim: true },
     description: { type: String, trim: true },
