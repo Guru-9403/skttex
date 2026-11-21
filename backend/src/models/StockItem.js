@@ -100,9 +100,8 @@ const stockItemSchema = new mongoose.Schema(
 
 // Helper method to compute current stock and status
 stockItemSchema.methods.recalculateStock = function () {
-  this.currentStock = this.openingStock + this.totalInward - this.totalOutward;
-  if (this.currentStock < 0) {
-    throw new Error(`Calculation error: Current stock for ${this.name} (${this.itemCode}) cannot be negative (${this.currentStock}).`);
+  if (this.currentStock === undefined || isNaN(this.currentStock) || this.currentStock < 0) {
+    this.currentStock = Math.max(0, (this.openingStock || 0) + (this.totalInward || 0) - (this.totalOutward || 0));
   }
 
   if (this.currentStock === 0) {

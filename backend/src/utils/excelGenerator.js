@@ -252,13 +252,12 @@ export function generateStockExcelWorkbook(data) {
       { v: 'Item Name', s: 1 },
       { v: 'Category', s: 1 },
       { v: 'Unit', s: 1 },
-      { v: 'Opening Stock', s: 1 },
-      { v: 'Total Inward', s: 1 },
-      { v: 'Total Outward', s: 1 },
-      { v: 'Current Stock', s: 1 },
+      { v: 'Available Stock', s: 1 },
       { v: 'Purchase Price (₹)', s: 1 },
       { v: 'Selling Price (₹)', s: 1 },
-      { v: 'Total Stock Value (₹)', s: 1 },
+      { v: 'Unit Margin (₹)', s: 1 },
+      { v: 'Total Stock Cost (₹)', s: 1 },
+      { v: 'Total Retail Value (₹)', s: 1 },
       { v: 'Min Alert Threshold', s: 1 },
       { v: 'Stock Status', s: 1 },
       { v: 'Last Updated', s: 1 },
@@ -266,27 +265,28 @@ export function generateStockExcelWorkbook(data) {
   ];
 
   for (const item of stockItems) {
-    const stockVal = Number((item.currentStock * item.purchasePrice).toFixed(2));
+    const costVal = Number((item.currentStock * item.purchasePrice).toFixed(2));
+    const retailVal = Number((item.currentStock * item.sellingPrice).toFixed(2));
+    const margin = Number((item.sellingPrice - item.purchasePrice).toFixed(2));
     const lastUp = item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-IN') : '';
     sheet1Rows.push([
       { v: item.itemCode, s: 0 },
       { v: item.name, s: 0 },
       { v: item.category || 'General', s: 0 },
       { v: item.unit || 'Pieces', s: 0 },
-      { v: item.openingStock, s: 0 },
-      { v: item.totalInward, s: 0 },
-      { v: item.totalOutward, s: 0 },
       { v: item.currentStock, s: 0 },
       { v: item.purchasePrice, s: 4 },
       { v: item.sellingPrice, s: 4 },
-      { v: stockVal, s: 4 },
+      { v: margin, s: 4 },
+      { v: costVal, s: 4 },
+      { v: retailVal, s: 4 },
       { v: item.lowStockThreshold || 10, s: 0 },
       { v: item.status, s: 0 },
       { v: lastUp, s: 0 },
     ]);
   }
 
-  const sheet1ColWidths = [16, 30, 16, 12, 14, 14, 14, 14, 18, 18, 20, 18, 16, 14];
+  const sheet1ColWidths = [16, 30, 16, 12, 16, 18, 18, 16, 20, 20, 18, 16, 14];
   const sheet1Xml = buildSheetXml(sheet1Rows, sheet1ColWidths);
 
   // 2. Inward Stock History Sheet

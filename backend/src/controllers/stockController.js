@@ -259,7 +259,7 @@ export const createStockItem = asyncHandler(async (req, res) => {
     throw new HttpError(400, `Item with code "${cleanCode}" already exists.`);
   }
 
-  const opStock = Math.max(0, Number(openingStock) || 0);
+  const opStock = Math.max(0, Number(req.body.currentStock ?? openingStock ?? 0));
 
   const item = new StockItem({
     itemCode: cleanCode,
@@ -369,6 +369,7 @@ export const updateStockItem = asyncHandler(async (req, res) => {
     unit,
     type,
     image,
+    currentStock,
     openingStock,
     lowStockThreshold,
     purchasePrice,
@@ -388,17 +389,17 @@ export const updateStockItem = asyncHandler(async (req, res) => {
   if (sellingPrice !== undefined) item.sellingPrice = Math.max(0, Number(sellingPrice));
   if (lowStockThreshold !== undefined) item.lowStockThreshold = Math.max(0, Number(lowStockThreshold));
 
-  // If opening stock is being adjusted, verify it will not produce negative stock
-  if (openingStock !== undefined) {
-    const newOpening = Math.max(0, Number(openingStock));
-    const projectedStock = newOpening + item.totalInward - item.totalOutward;
-    if (projectedStock < 0) {
-      throw new HttpError(
-        400,
-        `Cannot change opening stock to ${newOpening}. With total inward of ${item.totalInward} and outward of ${item.totalOutward}, current stock would become negative (${projectedStock}).`
-      );
-    }
-    item.openingStock = newOpening;
+  // Directly set current stock quantity
+  if (currentStock !== undefined) {
+    item.currentStock = Math.max(0, Number(currentStock));
+    item.openingStock = item.currentStock;
+    item.totalInward = 0;
+    item.totalOutward = 0;
+  } else if (openingStock !== undefined) {
+    item.currentStock = Math.max(0, Number(openingStock));
+    item.openingStock = item.currentStock;
+    item.totalInward = 0;
+    item.totalOutward = 0;
   }
 
   item.updatedBy = req.user._id;
